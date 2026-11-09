@@ -1,6 +1,5 @@
 
-
-name: Buat Video MP4
+name: Animasi 2D Garuda
 
 on:
   workflow_dispatch:
@@ -9,14 +8,12 @@ jobs:
   render:
     runs-on: ubuntu-latest
     timeout-minutes: 60
-
     steps:
-      - name: Siapkan Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Buat proyek animasi
+      - name: Buat proyek
         run: |
           mkdir video
           cd video
@@ -26,51 +23,115 @@ jobs:
           cat > src/index.jsx <<'EOF'
           import React from 'react';
           import {registerRoot} from 'remotion';
-          import {Composition, useCurrentFrame, useVideoConfig, interpolate, AbsoluteFill} from 'remotion';
+          import {Composition,useCurrentFrame,useVideoConfig,interpolate,AbsoluteFill} from 'remotion';
 
-          const scenes = [
-            ['ASAL USUL BURUNG GARUDA','Legenda burung agung dalam kisah Nusantara'],
-            ['MAKHLUK YANG PENUH MAKNA','Garuda dikenal sebagai lambang kekuatan dan keberanian'],
-            ['KISAH DARI MASA LAMPAU','Cerita Garuda berkembang dalam tradisi dan kisah kuno'],
-            ['SIMBOL KEBANGGAAN','Garuda kemudian menjadi lambang negara Indonesia']
+          const scenes=[
+            {title:'LEGENDA SANG GARUDA',sub:'Kisah makhluk agung dari masa lampau',bg:'#101820',place:'HUTAN KUNO'},
+            {title:'KEKUATAN SANG RAJA LANGIT',sub:'Garuda dikenal sebagai makhluk yang perkasa',bg:'#17232d',place:'PEGUNUNGAN'},
+            {title:'SAYAP YANG MEMBELA',sub:'Sebuah kisah tentang keberanian dan pengorbanan',bg:'#101c29',place:'LANGIT NUSANTARA'},
+            {title:'LAMBANG KEBANGGAAN',sub:'Garuda menjadi lambang negara Indonesia',bg:'#18232c',place:'NUSANTARA'}
           ];
 
-          const Video = () => {
-            const frame = useCurrentFrame();
-            const {durationInFrames} = useVideoConfig();
-            const scene = Math.floor(frame / 225) % scenes.length;
-            const local = frame % 225;
-            const opacity = interpolate(local,[0,25,195,224],[0,1,1,0],{extrapolateRight:'clamp'});
-            const zoom = interpolate(local,[0,225],[1,1.12]);
-            const [title,sub] = scenes[scene];
+          const Person=({frame})=>{
+            const walk=Math.sin(frame/5)*9;
+            const arm=Math.sin(frame/5)*25;
+            return <g transform={`translate(0 ${Math.abs(walk)*0.5})`}>
+              <ellipse cx="0" cy="180" rx="55" ry="12" fill="#000" opacity=".4"/>
+              <g stroke="#d8e0e4" strokeWidth="17" strokeLinecap="round" fill="none">
+                <path d={`M-14 105 L${-25+walk} 145 L${-30+walk} 175`}/>
+                <path d={`M14 105 L${25-walk} 145 L${30-walk} 175`}/>
+                <path d={`M-23 55 L${-45+arm/2} 95 L${-50+arm/2} 120`}/>
+                <path d={`M23 55 L${45-arm/2} 95 L${50-arm/2} 120`}/>
+              </g>
+              <path d="M-27 48 Q0 35 27 48 L22 112 L-22 112Z" fill="#00bcd4"/>
+              <circle cx="0" cy="15" r="25" fill="#e9c5a5"/>
+              <path d="M-25 8 Q-22 -22 7 -14 Q28 -10 25 12 L15 0 L-15 0Z" fill="#202b32"/>
+            </g>;
+          };
 
-            return <AbsoluteFill style={{background:'#111820',color:'white',fontFamily:'Arial',overflow:'hidden'}}>
-              <AbsoluteFill style={{opacity:0.18,transform:`scale(${zoom})`,background:'radial-gradient(circle at 70% 40%,#00bcd4,transparent 40%),linear-gradient(130deg,#101820,#263746)'}}/>
-              <div style={{position:'absolute',left:80,top:65,color:'#00d5e9',fontSize:24,letterSpacing:8}}>DOKUMENTER • NUSANTARA</div>
-              <div style={{position:'absolute',left:80,top:'28%',fontSize:100,opacity:0.12}}>GARUDA</div>
-              <div style={{position:'absolute',left:80,right:80,top:'40%',opacity,transform:`translateY(${interpolate(local,[0,30],[45,0],{extrapolateRight:'clamp'})}px)`}}>
-                <div style={{fontSize:58,fontWeight:900,lineHeight:1.2,maxWidth:1050}}>{title}</div>
-                <div style={{marginTop:30,fontSize:30,color:'#9debf3',maxWidth:900,lineHeight:1.5}}>{sub}</div>
-                <div style={{marginTop:45,width:120,height:5,background:'#00d5e9'}}/>
+          const Garuda=({frame})=>{
+            const flap=Math.sin(frame/7)*22;
+            return <g transform="translate(0 0)" fill="#d8e0e4">
+              <path d="M0 0 Q-18 -15 -8 -45 Q-4 -20 0 0 Q4 -20 8 -45 Q18 -15 0 0Z"/>
+              <path d="M-5 -10 Q-90 -80 -180 -25 Q-100 -35 -35 5Z" transform={`rotate(${flap} -5 -10)`}/>
+              <path d="M5 -10 Q90 -80 180 -25 Q100 -35 35 5Z" transform={`rotate(${-flap} 5 -10)`}/>
+              <path d="M-8 0 L0 55 L8 0Z"/>
+              <path d="M-5 55 L-25 75 L0 65 L25 75 L5 55Z" fill="#00c9df"/>
+              <circle cx="0" cy="-22" r="5" fill="#00c9df"/>
+            </g>;
+          };
+
+          const Video=()=>{
+            const f=useCurrentFrame();
+            const {durationInFrames}=useVideoConfig();
+            const sceneIndex=Math.min(3,Math.floor(f/225));
+            const local=f%225;
+            const s=scenes[sceneIndex];
+            const fade=interpolate(local,[0,20,200,224],[0,1,1,0],{extrapolateRight:'clamp'});
+            const zoom=interpolate(local,[0,225],[1,1.15]);
+            const isLast=sceneIndex===3;
+
+            return <AbsoluteFill style={{background:s.bg,color:'white',fontFamily:'Arial',overflow:'hidden'}}>
+              <AbsoluteFill style={{transform:`scale(${zoom})`,opacity:.65}}>
+                <svg width="100%" height="100%" viewBox="0 0 1280 720">
+                  <defs>
+                    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#263e50"/>
+                      <stop offset="100%" stopColor={s.bg}/>
+                    </linearGradient>
+                  </defs>
+                  <rect width="1280" height="720" fill="url(#sky)"/>
+                  <circle cx="990" cy="160" r="85" fill="#00c9df" opacity=".13"/>
+                  <path d="M0 490 L200 260 L390 490 L600 220 L850 490 L1030 300 L1280 500 V720 H0Z" fill="#263c49"/>
+                  <path d="M0 570 L260 400 L480 590 L770 390 L1030 580 L1280 430 V720 H0Z" fill="#182a35"/>
+                  {Array.from({length:12},(_,i)=><path key={i} d={`M${i*120} 720 L${i*120+30} 520 L${i*120+65} 720Z`} fill="#0b1821"/>)}
+                </svg>
+              </AbsoluteFill>
+
+              <div style={{position:'absolute',top:45,left:65,color:'#00c9df',fontSize:20,letterSpacing:7}}>DOKUMENTER NUSANTARA</div>
+              <div style={{position:'absolute',top:100,right:70,color:'#a7bac3',fontSize:17,letterSpacing:4}}>{s.place}</div>
+
+              {sceneIndex===0||sceneIndex===1?
+                <svg style={{position:'absolute',width:'100%',height:'100%'}} viewBox="0 0 1280 720">
+                  <g transform={`translate(${sceneIndex===0?350:920} ${sceneIndex===0?440:420}) scale(${sceneIndex===0?1.2:1.5})`}>
+                    <Person frame={f}/>
+                  </g>
+                  <g transform={`translate(${interpolate(local,[0,225],[1050,720])} ${sceneIndex===0?220:190}) scale(1.15)`}>
+                    <Garuda frame={f}/>
+                  </g>
+                </svg>
+                :
+                <svg style={{position:'absolute',width:'100%',height:'100%'}} viewBox="0 0 1280 720">
+                  <g transform={`translate(${interpolate(local,[0,225],[1050,600])} ${interpolate(local,[0,225],[260,190])}) scale(1.8)`}>
+                    <Garuda frame={f}/>
+                  </g>
+                  {isLast&&<g transform="translate(350 470) scale(1.2)"><Person frame={f}/></g>}
+                </svg>
+              }
+
+              <div style={{position:'absolute',left:75,bottom:150,right:75,opacity:fade,transform:`translateY(${interpolate(local,[0,30],[30,0],{extrapolateRight:'clamp'})}px)`}}>
+                <div style={{fontSize:53,fontWeight:900,maxWidth:900,lineHeight:1.15,textShadow:'0 4px 15px #000'}}>{s.title}</div>
+                <div style={{fontSize:27,color:'#a8edf3',marginTop:20}}>{s.sub}</div>
+                <div style={{width:100,height:5,background:'#00c9df',marginTop:25}}/>
               </div>
-              <div style={{position:'absolute',bottom:55,left:80,right:80,height:5,background:'#35434b'}}>
-                <div style={{height:5,width:`${frame/durationInFrames*100}%`,background:'#00d5e9'}}/>
+              <div style={{position:'absolute',bottom:45,left:75,right:75,height:4,background:'#42515b'}}>
+                <div style={{height:4,width:`${f/durationInFrames*100}%`,background:'#00c9df'}}/>
               </div>
-              <div style={{position:'absolute',bottom:75,left:80,fontSize:18,color:'#9aaab2'}}>SEJARAH DAN LEGENDA INDONESIA</div>
             </AbsoluteFill>;
           };
 
-          const Root = () => <Composition id="Main" component={Video} durationInFrames={900} fps={30} width={1280} height={720}/>;
+          const Root=()=> <Composition id="Main" component={Video} durationInFrames={900} fps={30} width={1280} height={720}/>;
           registerRoot(Root);
           EOF
 
-      - name: Render MP4
+      - name: Render video
         run: |
           cd video
           npx remotion render src/index.jsx Main /tmp/garuda.mp4 --codec=h264
 
-      - name: Simpan video
+      - name: Simpan MP4
         uses: actions/upload-artifact@v4
         with:
           name: video-mp4
           path: /tmp/garuda.mp4
+          
