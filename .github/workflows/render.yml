@@ -1,1 +1,76 @@
 
+
+name: Buat Video MP4
+
+on:
+  workflow_dispatch:
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Siapkan Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Buat proyek animasi
+        run: |
+          mkdir video
+          cd video
+          npm init -y
+          npm install remotion @remotion/cli react react-dom
+          mkdir src
+          cat > src/index.jsx <<'EOF'
+          import React from 'react';
+          import {registerRoot} from 'remotion';
+          import {Composition, useCurrentFrame, useVideoConfig, interpolate, AbsoluteFill} from 'remotion';
+
+          const scenes = [
+            ['ASAL USUL BURUNG GARUDA','Legenda burung agung dalam kisah Nusantara'],
+            ['MAKHLUK YANG PENUH MAKNA','Garuda dikenal sebagai lambang kekuatan dan keberanian'],
+            ['KISAH DARI MASA LAMPAU','Cerita Garuda berkembang dalam tradisi dan kisah kuno'],
+            ['SIMBOL KEBANGGAAN','Garuda kemudian menjadi lambang negara Indonesia']
+          ];
+
+          const Video = () => {
+            const frame = useCurrentFrame();
+            const {durationInFrames} = useVideoConfig();
+            const scene = Math.floor(frame / 225) % scenes.length;
+            const local = frame % 225;
+            const opacity = interpolate(local,[0,25,195,224],[0,1,1,0],{extrapolateRight:'clamp'});
+            const zoom = interpolate(local,[0,225],[1,1.12]);
+            const [title,sub] = scenes[scene];
+
+            return <AbsoluteFill style={{background:'#111820',color:'white',fontFamily:'Arial',overflow:'hidden'}}>
+              <AbsoluteFill style={{opacity:0.18,transform:`scale(${zoom})`,background:'radial-gradient(circle at 70% 40%,#00bcd4,transparent 40%),linear-gradient(130deg,#101820,#263746)'}}/>
+              <div style={{position:'absolute',left:80,top:65,color:'#00d5e9',fontSize:24,letterSpacing:8}}>DOKUMENTER • NUSANTARA</div>
+              <div style={{position:'absolute',left:80,top:'28%',fontSize:100,opacity:0.12}}>GARUDA</div>
+              <div style={{position:'absolute',left:80,right:80,top:'40%',opacity,transform:`translateY(${interpolate(local,[0,30],[45,0],{extrapolateRight:'clamp'})}px)`}}>
+                <div style={{fontSize:58,fontWeight:900,lineHeight:1.2,maxWidth:1050}}>{title}</div>
+                <div style={{marginTop:30,fontSize:30,color:'#9debf3',maxWidth:900,lineHeight:1.5}}>{sub}</div>
+                <div style={{marginTop:45,width:120,height:5,background:'#00d5e9'}}/>
+              </div>
+              <div style={{position:'absolute',bottom:55,left:80,right:80,height:5,background:'#35434b'}}>
+                <div style={{height:5,width:`${frame/durationInFrames*100}%`,background:'#00d5e9'}}/>
+              </div>
+              <div style={{position:'absolute',bottom:75,left:80,fontSize:18,color:'#9aaab2'}}>SEJARAH DAN LEGENDA INDONESIA</div>
+            </AbsoluteFill>;
+          };
+
+          const Root = () => <Composition id="Main" component={Video} durationInFrames={900} fps={30} width={1280} height={720}/>;
+          registerRoot(Root);
+          EOF
+
+      - name: Render MP4
+        run: |
+          cd video
+          npx remotion render src/index.jsx Main /tmp/garuda.mp4 --codec=h264
+
+      - name: Simpan video
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-mp4
+          path: /tmp/garuda.mp4
