@@ -37,9 +37,12 @@ jobs:
       - name: Ambil isi repo
         uses: actions/checkout@v4
 
-      - name: Ekstrak proyek.zip bila ada
+      - name: Ekstrak proyek dari zip
         run: |
-          if [ -f proyek.zip ]; then unzip -o -q proyek.zip; fi
+          ls -la
+          ZIP=$(ls *.zip 2>/dev/null | head -n 1)
+          if [ -z "$ZIP" ]; then echo "GALAT: tidak ada file .zip di halaman utama repo. Unggah proyek.zip dulu."; exit 1; fi
+          python3 -m zipfile -e "$ZIP" .
           ls
 
       - name: Pasang Python
